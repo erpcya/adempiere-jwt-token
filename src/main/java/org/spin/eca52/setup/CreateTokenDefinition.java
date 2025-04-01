@@ -80,8 +80,12 @@ public class CreateTokenDefinition implements ISetupDefinition {
 
 
 	private MSysConfig createSystemConfigurator(Properties context, String transactionName) {
-		MSysConfig secretKey = MSysConfig.get(context, JWTUtil.ECA52_JWT_SECRET_KEY, transactionName);
-		if (secretKey != null) {
+		MSysConfig secretKey =  new Query(context, MSysConfig.Table_Name, MSysConfig.COLUMNNAME_Name.concat("=?"), transactionName)
+								.setParameters(JWTUtil.ECA52_JWT_SECRET_KEY)
+								.setOnlyActiveRecords(true)
+								.first();
+		if (secretKey != null
+				&& secretKey.get_ID() > 0) {
 			return secretKey;
 		}
 		//

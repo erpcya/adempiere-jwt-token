@@ -1,12 +1,34 @@
-plugins {
-	id 'java-library'
-	id 'maven-publish'
-	id 'signing'
+//apply plugin: 'application'
+apply plugin: 'de.undercouch.download'
+apply plugin: 'java-library'
+apply plugin: 'maven-publish'
+apply plugin: 'signing'
+
+//startScripts.enabled = false
+
+buildscript {
+  dependencies {
+    classpath "io.spring.gradle:dependency-management-plugin:1.0.9.RELEASE"
+  }
+  
+  //Gradle Download plugin >>
+  repositories {
+      mavenCentral()
+  }
+  dependencies {
+      classpath 'de.undercouch:gradle-download-task:4.1.1'
+  }
+  //Gradle Download plugin <<
 }
 
-sourceCompatibility = 1.11
+
+
+sourceCompatibility = 1.8
 def baseVersion = '3.9.4'
 def baseGroupId = 'io.github.adempiere'
+def adempiereERPVersion = '3.9.3-rs-4.3'
+def libraryRepo  = "https://maven.pkg.github.com/erpya/repository"
+def patchVersion = System.getenv("ADEMPIERE_LIBRARY_VERSION") ?: "local-1.0.0"
 
 repositories {
     mavenLocal()
@@ -20,19 +42,16 @@ allprojects {
 }
 
 dependencies {
-   api fileTree(
-        dir: 'lib',
-        include: [
-            '*.jar'
-        ]
-    )
+	implementation fileTree(dir: 'lib', include: ['*.jar'])
+	implementation fileTree(dir: 'dependences', include: ['*.jar'])
+	implementation files("dependences/classes/")
 
 	api "io.jsonwebtoken:jjwt-api:0.12.6"
 	api "io.jsonwebtoken:jjwt-impl:0.12.6"
 	api "io.jsonwebtoken:jjwt-jackson:0.12.6"
 
 	//	ADempiere Core
-	api "${baseGroupId}:base:${baseVersion}"
+	//api "${baseGroupId}:base:${baseVersion}"
 }
 
 sourceSets {
@@ -50,7 +69,7 @@ java {
 
 
 def entityType = 'D'
-group = "io.github.adempiere"
+group = "org.erpya.adempiere.tools"
 version = System.getenv("ADEMPIERE_LIBRARY_VERSION") ?: "local-1.0.0"
 
 jar {
@@ -66,15 +85,15 @@ jar {
 publishing {
     repositories {
 		mavenLocal()
-
         maven {
-            url = "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/"
+            url = libraryRepo
             credentials {
-                username = findProperty("sonatypeUsername")
-                password = findProperty("sonatypePassword")
+                username = System.getenv("GITHUB_DEPLOY_USER") ?: System.properties['deploy.user']
+                password = System.getenv("GITHUB_DEPLOY_TOKEN") ?: System.properties['deploy.token'] 
             }
         }
     }
+    
     publications {
         mavenJava(MavenPublication) {
 			groupId = group
@@ -87,8 +106,8 @@ publishing {
                 url = 'http://adempiere.io/'
                 licenses {
                     license {
-                        name = 'GNU General Public License, version 2'
-                        url = 'https://www.gnu.org/licenses/old-licenses/gpl-2.0.txt'
+                        name = 'GNU General Public License v3.0'
+                        url = 'https://www.gnu.org/licenses/gpl-3.0.txt'
                     }
                 }
                 developers {
@@ -97,11 +116,6 @@ publishing {
                         name = 'Yamel Senih'
                         email = 'ysenih@erpya.com'
                     }
-                }
-                scm {
-                    connection = 'scm:git:git://github.com/adempiere/adempiere-jwt-token.git'
-                    developerConnection = 'scm:git:ssh://github.com/adempiere/adempiere-jwt-token.git'
-                    url = 'http://github.com/adempiere/adempiere-jwt-token'
                 }
             }
 		}
@@ -130,4 +144,54 @@ signing {
     def signingPassword = findProperty("signingPassword")
     useInMemoryPgpKeys(signingKey, signingPassword)
     sign publishing.publications.mavenJava
+}
+
+task refreshDependences(){
+	//delete fileTree('dependences')
+	file('dependences').mkdirs()
+	file('dependences/tmp/').mkdirs()
+	file('dependences/webuiClass').mkdirs()
+	doLast {
+		download {
+            src 'http://github.com/erpcya/adempiere/releases/download/' + adempiereERPVersion + '/Adempiere_393LTS.tar.gz'
+            dest 'dependences/tmp/Adempiere_393LTS.tar.gz'
+            overwrite false
+        }
+        
+        copy {
+            from tarTree(resources.gzip('dependences/tmp/Adempiere_393LTS.tar.gz'))
+            into 'dependences/tmp'
+        }
+        
+        copy {
+            from zipTree('dependences/tmp/Adempiere/lib/webui.war')
+            into 'dependences/webuiClass/'
+        }
+        
+        copy {
+        	from "dependences/tmp/Adempiere/lib"
+        	into "dependences"
+        	include "*.jar"
+    	}
+    	
+        copy {
+        	from fileTree('dependences/tmp/Adempiere/packages/').filter { it.isFile()}
+        	into "dependences"
+        	include "*.jar"
+    	}
+    	
+    	copy {
+        	from "dependences/webuiClass/WEB-INF/lib"
+        	into "dependences"
+        	include "*.jar"
+    	}
+    	
+    	copy {
+	        from "dependences/webuiClass/WEB-INF/classes"
+	        into "dependences/classes"
+    	}
+    	
+    	file('dependences/tmp/').deleteDir()
+    	file('dependences/webuiClass/').deleteDir()
+	}
 }
