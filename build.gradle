@@ -4,7 +4,7 @@ plugins {
 	id 'signing'
 }
 
-sourceCompatibility = 1.11
+sourceCompatibility = 1.17
 def baseVersion = '3.9.4'
 def baseGroupId = 'io.github.adempiere'
 
@@ -67,11 +67,19 @@ publishing {
     repositories {
 		mavenLocal()
 
+        //  This fork's own packages. Central carries upstream's artifact under the
+        //  same coordinate, and what this repository builds is not that — publishing
+        //  here under io.github.adempiere invites somebody to resolve one believing
+        //  it is the other.
+        //
+        //  The property still overrides it, for a repository that genuinely
+        //  publishes elsewhere.
         maven {
-            url = "https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/"
+            url = findProperty("deployPublishUrl")
+                    ?: "https://maven.pkg.github.com/erpcya/adempiere-jwt-token"
             credentials {
-                username = findProperty("sonatypeUsername")
-                password = findProperty("sonatypePassword")
+                username = System.getenv("GITHUB_DEPLOY_USER") ?: findProperty("sonatypeUsername")
+                password = System.getenv("GITHUB_DEPLOY_TOKEN") ?: findProperty("sonatypePassword")
             }
         }
     }
@@ -99,9 +107,11 @@ publishing {
                     }
                 }
                 scm {
-                    connection = 'scm:git:git://github.com/adempiere/adempiere-jwt-token.git'
-                    developerConnection = 'scm:git:ssh://github.com/adempiere/adempiere-jwt-token.git'
-                    url = 'http://github.com/adempiere/adempiere-jwt-token'
+                    //  The fork, not upstream. Whoever follows this from a
+                    //  published artifact wants the source that produced it.
+                    connection = 'scm:git:git://github.com/erpcya/adempiere-jwt-token.git'
+                    developerConnection = 'scm:git:ssh://github.com/erpcya/adempiere-jwt-token.git'
+                    url = 'http://github.com/erpcya/adempiere-jwt-token'
                 }
             }
 		}

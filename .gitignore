@@ -25,3 +25,9 @@ hs_err_pid*
 /bin/
 /build/
 /.gradle/
+
+# The gradle wrapper, against the rules above. It is not build output and not
+# configuration: it is how this repository states which Gradle builds it, and a
+# checkout without it cannot build at all.
+!gradle/wrapper/gradle-wrapper.jar
+!gradle/wrapper/gradle-wrapper.properties
