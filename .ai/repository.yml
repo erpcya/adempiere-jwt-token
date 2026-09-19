@@ -21,11 +21,10 @@ upstream: https://github.com/adempiere/adempiere-jwt-token
 # Domain nouns, not class names and not this repository's own name.
 terms:
   - token
-  - autenticación
-  - sesión
-  - login
   - JWT
-
+  - acceso de terceros
+  - sesión
+  - autenticación
 # How this is built comes from standards/build-profiles.yml, matched by the
 # gradle wrapper in this tree. Nothing to declare unless this repository differs.
 
